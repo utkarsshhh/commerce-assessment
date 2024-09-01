@@ -1,0 +1,29 @@
+SQL Assessment Question
+
+
+SELECT
+    partitioned.customer_id,
+    partitioned.customer_name,
+    partitioned.email,
+    partitioned.total_spent,
+    partitioned.category AS most_purchased_category
+FROM (
+    SELECT
+        c.customer_id,
+        c.customer_name,
+        c.email,
+        SUM(oi.quantity * oi.price_per_unit) AS total_spent,
+        p.category,
+        ROW_NUMBER() OVER (PARTITION BY c.customer_id ORDER BY SUM(oi.quantity * oi.price_per_unit) DESC) AS rn
+    FROM
+        Customers c
+    JOIN Orders o ON c.customer_id = o.customer_id
+    JOIN Order_Items oi ON o.order_id = oi.order_id
+    JOIN Products p ON oi.product_id = p.product_id
+	WHERE o.order_date >= CURRENT_DATE - INTERVAL '1 year'
+    GROUP BY
+        c.customer_id, c.customer_name, c.email, p.category
+) AS partitioned
+WHERE
+    partitioned.rn = 1
+LIMIT 5;
